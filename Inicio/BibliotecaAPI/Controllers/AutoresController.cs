@@ -3,6 +3,7 @@ using Azure;
 using BibliotecaAPI.Datos;
 using BibliotecaAPI.DTO;
 using BibliotecaAPI.Entidades;
+using BibliotecaAPI.Servicios;
 using BibliotecaAPI.Utilidades;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.JsonPatch;
@@ -19,10 +20,14 @@ namespace BibliotecaAPI.Controllers
     {
         private readonly ApplicationDbContext context; //campo de clase para poder acceder en toda la clase
         private readonly IMapper mapper; //imyeccion de AutoMapper
-        public AutoresController(ApplicationDbContext context, IMapper mapper) //inyectando el applicationDBContext
+        private readonly IAlmacenadorArchivos almacenadorArchivos;
+        private const string contenedor = "autores";
+        public AutoresController(ApplicationDbContext context, IMapper mapper,
+            IAlmacenadorArchivos almacenadorArchivos) //inyectando el applicationDBContext
         {
             this.context = context;
             this.mapper = mapper;
+            this.almacenadorArchivos = almacenadorArchivos;
         }
 
         //[HttpGet]
@@ -39,14 +44,14 @@ namespace BibliotecaAPI.Controllers
         //}
 
         [HttpGet]
-        public async Task<IEnumerable<AutorDTO>> Get([FromQuery] PaginacionDTO paginacionDTO)
+        public async Task<IEnumerable<AutorCreacionConFotoDTO>> Get([FromQuery] PaginacionDTO paginacionDTO)
         {
             var queryable = context.Autores.AsQueryable(); //es una representacion de la tabla autores pero en MEMORIA
             await HttpContext.InsertarParametrosPaginacionEnCabecera(queryable);//se pasa las representacion de tabla autores
             var autores = await queryable
                 .OrderBy(x => x.Nombres) //se ordena por nombre
                 .Paginar(paginacionDTO).ToListAsync(); //lista paginada
-            var autoresDTO = mapper.Map<IEnumerable<AutorDTO>>(autores);
+            var autoresDTO = mapper.Map<IEnumerable<AutorCreacionConFotoDTO>>(autores);
 
             return autoresDTO;
 
@@ -79,16 +84,42 @@ namespace BibliotecaAPI.Controllers
             var autor = mapper.Map<Autor> (autorCreacionDTO);
             context.Add(autor); //agregamos el autor
             await context.SaveChangesAsync(); //guardamos cambios asyn a nivel de bases de datos
-            var autorDTO = mapper.Map<AutorDTO>(autor);
+            var autorDTO = mapper.Map<AutorCreacionConFotoDTO>(autor);
             return CreatedAtRoute("ObtenerAutor", new {id = autor.Id}, autor); //creado por ruta, id cliente, autor creado
+        }
+        [HttpPost("con-foto")]
+        public async Task<ActionResult> PostConFoto([FromForm]AutorCreacionConFotoDTO autorCreacionDTO)
+        {
+            var autor = mapper.Map<Autor>(autorCreacionDTO);
+            if(autorCreacionDTO.Foto is not null) //si existe la foto
+            {
+                var url = await almacenadorArchivos.Almacenar(contenedor, autorCreacionDTO.Foto); //le mandamos la interfaz almacenamos y pasamos los parametros
+                autor.Foto = url; //asignamos a la base de datos la url
+            }
+            context.Add(autor); //agregamos el autor
+            await context.SaveChangesAsync(); //guardamos cambios asyn a nivel de bases de datos
+            var autorDTO = mapper.Map<AutorCreacionConFotoDTO>(autor);
+            return CreatedAtRoute("ObtenerAutor", new { id = autor.Id }, autor); //creado por ruta, id cliente, autor creado
         }
 
         [HttpPut("{id:int}")] // api/autores/id
-        public async Task<ActionResult> Put(int id, AutorCreacionDTO autorCreacionDTO)
+        public async Task<ActionResult> Put(int id, [FromForm]AutorCreacionConFotoDTO autorCreacionDTO)
         {
-            var autor = mapper.Map<Autor>(autorCreacionDTO);
-            autor.Id = id;
-            context.Update(autor);
+            var existeAutor = await context.Autores.AnyAsync(x => x.Id==id); //buscamos cualquier id que exista y sea igual al pasado por parametro
+            if(!existeAutor) return NotFound(); //si no existe retornamos
+            var autor = mapper.Map<Autor>(autorCreacionDTO); //si existe mapeamos el autor
+            autor.Id = id; //asignamos identificacion 
+            if(autorCreacionDTO.Foto is not null) //si me mandan la foto la editamos
+            {
+                var fotoActual = await context
+                    .Autores.Where(x => x.Id == id)
+                    .Select(x => x.Foto)
+                    .FirstAsync(); //buscamos la identificacion de autor y la foto que tiene como la primera encontrada
+                var url = await almacenadorArchivos.Editar(fotoActual, contenedor, autorCreacionDTO.Foto); //interfaz y le pasamos el metodo editar con la ruta de la foto actual, el contenedor y la foto por parametro nueva
+                autor.Foto = url;
+            }
+
+            context.Update(autor); //actualizamos 
             await context.SaveChangesAsync();
             return NoContent(); //204 standart API 
         }
@@ -127,14 +158,12 @@ namespace BibliotecaAPI.Controllers
         [HttpDelete("{id:int}")]
         public async Task<ActionResult> Delete(int id)
         {
-            var registrosBorrados = await context.Autores.Where(x => x.Id == id).ExecuteDeleteAsync();
-
-            if (registrosBorrados == 0)
-            {
-                return NotFound(); 
-            }
-             
-            return NoContent(); //no retorna nada porque ya no existe 
+            var autor = await context.Autores.FirstOrDefaultAsync(a => a.Id == id); //buscamos por identificaicon el autor
+            if (autor == null) return NotFound(); //si es null retornamos no encontrado
+            context.Remove(autor); //si el autor existe utilizar el dbContext borrar autor
+            await context.SaveChangesAsync(); //guardamos cambios 
+            await almacenadorArchivos.Borrar(autor.Foto, contenedor); //borramos la foto guardada en la ruta del autor y el contenedor
+            return NoContent();
         }
     }
 }

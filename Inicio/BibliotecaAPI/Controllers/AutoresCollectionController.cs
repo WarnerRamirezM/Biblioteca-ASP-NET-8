@@ -61,7 +61,7 @@ namespace BibliotecaAPI.Controllers
             var autores = mapper.Map<IEnumerable<Autor>> (autoresCreacionDTO);
             context.AddRange(autores); //agrega un listado de entidades
             await context.SaveChangesAsync();  
-            var autoresDTO = mapper.Map<IEnumerable<AutorDTO>> (autores);
+            var autoresDTO = mapper.Map<IEnumerable<AutorCreacionConFotoDTO>> (autores);
             var ids = autores.Select(x => x.Id);
             var idsString = string.Join(",", ids);
 

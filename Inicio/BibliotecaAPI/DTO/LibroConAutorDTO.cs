@@ -4,6 +4,6 @@ namespace BibliotecaAPI.DTO
 {
     public class LibroConAutoresDTO: LibroDTO //herencia la id y titulo del libro
     {
-        public List<AutorDTO> Autores { get; set; } = [];
+        public List<AutorCreacionConFotoDTO> Autores { get; set; } = [];
     }
 }

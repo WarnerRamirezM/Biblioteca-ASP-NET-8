@@ -340,3 +340,4 @@ C:\Users\Asus\Desktop\CSHART\C# Udemy ApiRest ASP.NET Core 9\CursoRestFullApiASP
 C:\Users\Asus\Desktop\CSHART\C# Udemy ApiRest ASP.NET Core 9\CursoRestFullApiASPNETCore Continuidad\Modulo 8 - Escenario Avanzados\Inicio\BibliotecaAPI\obj\Debug\net9.0\BibliotecaAPI.pdb
 C:\Users\Asus\Desktop\CSHART\C# Udemy ApiRest ASP.NET Core 9\CursoRestFullApiASPNETCore Continuidad\Modulo 8 - Escenario Avanzados\Inicio\BibliotecaAPI\obj\Debug\net9.0\BibliotecaAPI.genruntimeconfig.cache
 C:\Users\Asus\Desktop\CSHART\C# Udemy ApiRest ASP.NET Core 9\CursoRestFullApiASPNETCore Continuidad\Modulo 8 - Escenario Avanzados\Inicio\BibliotecaAPI\obj\Debug\net9.0\ref\BibliotecaAPI.dll
+C:\Users\Asus\Desktop\CSHART\C# Udemy ApiRest ASP.NET Core 9\CursoRestFullApiASPNETCore Continuidad\Modulo 8 - Escenario Avanzados\Inicio\BibliotecaAPI\obj\Debug\net9.0\BibliotecaAPI.sourcelink.json
